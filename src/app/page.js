@@ -23,6 +23,7 @@ export default function Home() {
     rotX: 0,
     rotY: 0,
     rotZ: 0,
+    scale: 1,
     speed: 0,
     progress: 0,
   });
@@ -42,135 +43,281 @@ export default function Home() {
     if (typeof window !== 'undefined') {
       gsap.registerPlugin(ScrollTrigger);
 
-      // Create a master GSAP Timeline that triggers along the full page scroll
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: scrollWrapperRef.current,
-          start: 'top top',
-          end: 'bottom bottom',
-          scrub: 1.5, // smooth inertia lag
-          onUpdate: (self) => {
-            // Calculate velocity of scroll to drive propeller speed
-            const velocity = self.getVelocity() / 2500; // normalized scroll speed
-            droneState.current.speed = Math.min(1.2, Math.abs(velocity));
-            droneState.current.progress = self.progress;
+      const mm = gsap.matchMedia();
 
-            // Update active section state based on progress
-            const newSection = Math.min(4, Math.floor(self.progress * 4.9));
-            setActiveSection(newSection);
+      // ================= MOBILE LAYOUT TIMELINE (< 768px) =================
+      mm.add("(max-width: 767px)", () => {
+        // Reset properties to mobile defaults
+        droneState.current.x = 0;
+        droneState.current.y = 0.4;
+        droneState.current.z = 2.2;
+        droneState.current.scale = 1;
+
+        const tl = gsap.timeline({
+          scrollTrigger: {
+            trigger: scrollWrapperRef.current,
+            start: 'top top',
+            end: 'bottom bottom',
+            scrub: 1.5,
+            onUpdate: (self) => {
+              const velocity = self.getVelocity() / 2500;
+              droneState.current.speed = Math.min(1.2, Math.abs(velocity));
+              droneState.current.progress = self.progress;
+
+              const newSection = Math.min(4, Math.floor(self.progress * 4.9));
+              setActiveSection(newSection);
+            },
           },
-        },
+        });
+
+        // HERO -> ABOUT
+        // Perform a loop in the transition, but scale down to 0 as it approaches the About reading block
+        tl.to(droneState.current, {
+          x: 0.8,
+          y: 0.8,
+          z: 1.6,
+          rotX: -0.3,
+          rotY: 0.5,
+          rotZ: -0.5,
+          scale: 0.8,
+          duration: 0.2,
+          ease: 'sine.inOut',
+        })
+        .to(droneState.current, {
+          x: 0,
+          y: 1.5,
+          z: 0.8,
+          rotX: -0.8,
+          rotY: 1.2,
+          rotZ: -0.8,
+          scale: 0.5,
+          duration: 0.2,
+          ease: 'sine.inOut',
+        })
+        .to(droneState.current, {
+          x: -0.8,
+          y: 0.4,
+          z: 1.2,
+          rotX: 0.3,
+          rotY: 1.8,
+          rotZ: -0.2,
+          scale: 0.2,
+          duration: 0.25,
+          ease: 'sine.inOut',
+        })
+        // Settle at About: completely hidden
+        .to(droneState.current, {
+          x: -2.5,
+          y: 0.0,
+          z: 1.5,
+          rotX: 0.0,
+          rotY: Math.PI / 2,
+          rotZ: 0.0,
+          scale: 0,
+          duration: 0.15,
+          ease: 'power2.out',
+        })
+
+        // ABOUT -> SERVICES
+        // Reappear for the descent arch curve transition, then scale down to 0 for Services reading block
+        .to(droneState.current, {
+          x: -0.5,
+          y: 0.8,
+          z: 1.2,
+          rotX: -0.3,
+          rotY: 0.8,
+          rotZ: 0.5,
+          scale: 0.8,
+          duration: 0.4,
+          ease: 'power1.out',
+        })
+        .to(droneState.current, {
+          x: 0.8,
+          y: -0.2,
+          z: 1.0,
+          rotX: 0.5,
+          rotY: 2.4,
+          rotZ: 0.25,
+          scale: 0.4,
+          duration: 0.35,
+          ease: 'power2.in',
+        })
+        // Settle at Services: completely hidden
+        .to(droneState.current, {
+          x: 1.8,
+          y: -0.5,
+          z: 1.0,
+          rotX: 0.0,
+          rotY: Math.PI,
+          rotZ: 0.0,
+          scale: 0,
+          duration: 0.25,
+          ease: 'power2.out',
+        })
+
+        // SERVICES -> PORTFOLIO
+        // Settle deep in the background at Portfolio where it won't block photo grids
+        .to(droneState.current, {
+          x: 0,
+          y: 1.2,
+          z: -2.2,
+          rotX: 0.1,
+          rotY: Math.PI * 1.3,
+          rotZ: 0.05,
+          scale: 0.7,
+          duration: 1.0,
+          ease: 'power2.inOut',
+        })
+
+        // PORTFOLIO -> CONTACT
+        // Disappear completely for the form-filling Contact section
+        .to(droneState.current, {
+          x: 0.5,
+          y: -0.2,
+          z: 1.8,
+          rotX: 0.12,
+          rotY: Math.PI * 2.15,
+          rotZ: -0.15,
+          scale: 0,
+          duration: 1.0,
+          ease: 'power2.inOut',
+        });
       });
 
-      // Define default values
-      // Timeline Duration is 4, each phase corresponds to 1 unit of time
+      // ================= DESKTOP LAYOUT TIMELINE (>= 768px) =================
+      mm.add("(min-width: 768px)", () => {
+        // Reset properties to desktop defaults
+        droneState.current.x = 0;
+        droneState.current.y = 0;
+        droneState.current.z = 2;
+        droneState.current.scale = 1;
 
-      // ================= PHASE 1: HERO -> ABOUT =================
-      // Drone does a 3D loop in an elliptical orbit through the center screen,
-      // pitching forward (rotX) and rolling into the curve (rotZ)
-      tl.to(droneState.current, {
-        x: 1.6,
-        y: 1.0,
-        z: 1.4,
-        rotX: -0.35, // pitch up
-        rotY: 0.5,
-        rotZ: -0.65, // roll left
-        duration: 0.3,
-        ease: 'sine.inOut',
-      })
-      .to(droneState.current, {
-        x: 0,
-        y: 2.0,
-        z: 0.6,
-        rotX: -0.95, // loop peak
-        rotY: 1.5,
-        rotZ: -1.0, // heavy roll
-        duration: 0.3,
-        ease: 'sine.inOut',
-      })
-      .to(droneState.current, {
-        x: -1.6,
-        y: 0.6,
-        z: 1.0,
-        rotX: 0.45, // descending
-        rotY: 2.2,
-        rotZ: -0.3, // ease roll
-        duration: 0.25,
-        ease: 'sine.inOut',
-      })
-      // Settle at Section 2: About (left side, profile Y rotation looking right)
-      .to(droneState.current, {
-        x: -2.5,
-        y: 0.0,
-        z: 1.5,
-        rotX: 0.0,
-        rotY: Math.PI / 2, // 90 deg profile
-        rotZ: 0.0,
-        duration: 0.15,
-        ease: 'power2.out',
-      })
+        const tl = gsap.timeline({
+          scrollTrigger: {
+            trigger: scrollWrapperRef.current,
+            start: 'top top',
+            end: 'bottom bottom',
+            scrub: 1.5,
+            onUpdate: (self) => {
+              const velocity = self.getVelocity() / 2500;
+              droneState.current.speed = Math.min(1.2, Math.abs(velocity));
+              droneState.current.progress = self.progress;
 
-      // ================= PHASE 2: ABOUT -> SERVICES =================
-      // Descending Arch curve: drone climbs slightly and drops fast
-      .to(droneState.current, {
-        x: -0.5,
-        y: 1.2,
-        z: 1.2,
-        rotX: -0.3, // climb angle
-        rotY: 0.8,
-        rotZ: 0.5, // roll right to bank
-        duration: 0.4,
-        ease: 'power1.out',
-      })
-      .to(droneState.current, {
-        x: 1.2,
-        y: -0.1,
-        z: 1.0,
-        rotX: 0.5, // dive forward pitch
-        rotY: 2.4,
-        rotZ: 0.25,
-        duration: 0.35,
-        ease: 'power2.in',
-      })
-      // Settle at Section 3: Services (right side, rotated 180 Y pilot perspective)
-      .to(droneState.current, {
-        x: 1.8,
-        y: -0.5,
-        z: 1.0,
-        rotX: 0.0,
-        rotY: Math.PI, // looking away
-        rotZ: 0.0,
-        duration: 0.25,
-        ease: 'power2.out',
-      })
+              const newSection = Math.min(4, Math.floor(self.progress * 4.9));
+              setActiveSection(newSection);
+            },
+          },
+        });
 
-      // ================= PHASE 3: SERVICES -> PORTFOLIO =================
-      // Drone retracts back in Z and ascends in Y to clear screen space for grids
-      .to(droneState.current, {
-        x: 1.3,
-        y: 1.5,
-        z: -1.8,
-        rotX: 0.1,
-        rotY: Math.PI * 1.3, // diagonal profile
-        rotZ: 0.05,
-        duration: 1.0,
-        ease: 'power2.inOut',
-      })
+        // HERO -> ABOUT
+        tl.to(droneState.current, {
+          x: 1.6,
+          y: 1.0,
+          z: 1.4,
+          rotX: -0.35,
+          rotY: 0.5,
+          rotZ: -0.65,
+          scale: 1,
+          duration: 0.3,
+          ease: 'sine.inOut',
+        })
+        .to(droneState.current, {
+          x: 0,
+          y: 2.0,
+          z: 0.6,
+          rotX: -0.95,
+          rotY: 1.5,
+          rotZ: -1.0,
+          scale: 1,
+          duration: 0.3,
+          ease: 'sine.inOut',
+        })
+        .to(droneState.current, {
+          x: -1.6,
+          y: 0.6,
+          z: 1.0,
+          rotX: 0.45,
+          rotY: 2.2,
+          rotZ: -0.3,
+          scale: 1,
+          duration: 0.25,
+          ease: 'sine.inOut',
+        })
+        .to(droneState.current, {
+          x: -2.5,
+          y: 0.0,
+          z: 1.5,
+          rotX: 0.0,
+          rotY: Math.PI / 2,
+          rotZ: 0.0,
+          scale: 1,
+          duration: 0.15,
+          ease: 'power2.out',
+        })
 
-      // ================= PHASE 4: PORTFOLIO -> CONTACT =================
-      // Drone shoots back into foreground (z: 1.8) on right side,
-      // spins 180 degrees quickly, pitches forward, and rolls left
-      // to point physically at the contact form on the left
-      .to(droneState.current, {
-        x: 0.8,
-        y: -0.2,
-        z: 1.8,
-        rotX: 0.12, // pitch down to form
-        rotY: Math.PI * 2.15, // spin to face forward-left
-        rotZ: -0.15, // tilt bank pointing left
-        duration: 1.0,
-        ease: 'power2.inOut',
+        // ABOUT -> SERVICES
+        .to(droneState.current, {
+          x: -0.5,
+          y: 1.2,
+          z: 1.2,
+          rotX: -0.3,
+          rotY: 0.8,
+          rotZ: 0.5,
+          scale: 1,
+          duration: 0.4,
+          ease: 'power1.out',
+        })
+        .to(droneState.current, {
+          x: 1.2,
+          y: -0.1,
+          z: 1.0,
+          rotX: 0.5,
+          rotY: 2.4,
+          rotZ: 0.25,
+          scale: 1,
+          duration: 0.35,
+          ease: 'power2.in',
+        })
+        .to(droneState.current, {
+          x: 1.8,
+          y: -0.5,
+          z: 1.0,
+          rotX: 0.0,
+          rotY: Math.PI,
+          rotZ: 0.0,
+          scale: 1,
+          duration: 0.25,
+          ease: 'power2.out',
+        })
+
+        // SERVICES -> PORTFOLIO
+        .to(droneState.current, {
+          x: 1.3,
+          y: 1.5,
+          z: -1.8,
+          rotX: 0.1,
+          rotY: Math.PI * 1.3,
+          rotZ: 0.05,
+          scale: 1,
+          duration: 1.0,
+          ease: 'power2.inOut',
+        })
+
+        // PORTFOLIO -> CONTACT
+        .to(droneState.current, {
+          x: 0.8,
+          y: -0.2,
+          z: 1.8,
+          rotX: 0.12,
+          rotY: Math.PI * 2.15,
+          rotZ: -0.15,
+          scale: 1,
+          duration: 1.0,
+          ease: 'power2.inOut',
+        });
       });
+
+      return () => mm.revert();
     }
   }, []);
 

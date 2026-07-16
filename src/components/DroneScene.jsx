@@ -93,6 +93,12 @@ function DroneRig({ droneState, speedRef, progressRef }) {
     ref.current.rotation.x = THREE.MathUtils.lerp(ref.current.rotation.x, s.rotX, R);
     ref.current.rotation.y = THREE.MathUtils.lerp(ref.current.rotation.y, s.rotY, R);
     ref.current.rotation.z = THREE.MathUtils.lerp(ref.current.rotation.z, s.rotZ, R);
+    
+    const targetScale = s.scale !== undefined ? s.scale : 1;
+    ref.current.scale.x = THREE.MathUtils.lerp(ref.current.scale.x, targetScale, L);
+    ref.current.scale.y = THREE.MathUtils.lerp(ref.current.scale.y, targetScale, L);
+    ref.current.scale.z = THREE.MathUtils.lerp(ref.current.scale.z, targetScale, L);
+
     speedRef.current = s.speed ?? 0;
     progressRef.current = s.progress ?? 0;
   });
