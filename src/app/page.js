@@ -1,821 +1,380 @@
-'use client';
+import Header from "@/components/Header";
+import Hero from "@/components/Hero";
+import Stats from "@/components/Stats";
+import { ArrowIcon, CheckIcon, InstagramIcon, PlusIcon, Sparkle, WhatsAppIcon, XIcon } from "@/components/icons";
+import { FAQ, INSTAGRAM, PLACES, SITE_URL, WA, WHATSAPP, WHATSAPP_DISPLAY, wa } from "@/lib/site";
 
-import React, { useRef, useEffect, useState } from 'react';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import dynamic from 'next/dynamic';
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "ProfessionalService",
+      name: "Drone Porto PE",
+      url: SITE_URL,
+      description: "Filmagem e fotografia aérea com drone para pousadas, imóveis, eventos e comércio em Porto de Galinhas e Ipojuca.",
+      telephone: "+55-81-99681-0562",
+      address: { "@type": "PostalAddress", addressLocality: "Nossa Senhora do Ó, Ipojuca", addressRegion: "PE", addressCountry: "BR" },
+      geo: { "@type": "GeoCoordinates", latitude: -8.5, longitude: -35.0 },
+      areaServed: PLACES,
+      sameAs: [INSTAGRAM, `https://wa.me/${WHATSAPP}`],
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: FAQ.map(({ q, a }) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })),
+    },
+  ],
+};
 
-const DroneScene = dynamic(() => import('../components/DroneScene'), {
-  ssr: false,
-});
+const PAINS = [
+  ["O hóspede não entende onde você fica", "Do chão, ninguém vê que a pousada fica pertinho do mar. De cima, isso salta aos olhos."],
+  ["O terreno parece igual a todos", "Tamanho, acesso, vizinhança e distância da praia só aparecem numa vista aérea."],
+  ["O evento acaba e não sobra nada marcante", "A tomada aérea é a que todo mundo compartilha. Ela mostra o tamanho do que aconteceu."],
+];
 
-const TelemetryHUD = dynamic(() => import('../components/TelemetryHUD'), {
-  ssr: false,
-});
+const SEGMENTS = [
+  {
+    title: "Pousadas & hotéis",
+    text: "Mostre a piscina, o mar e a distância até a praia antes do hóspede perguntar. Vídeo para o Booking, Airbnb e Reels.",
+    cta: "Orçamento para pousada",
+    href: WA.pousada,
+    icon: <><path d="M6 40h36M10 40V20l14-10 14 10v20" /><rect x="19" y="26" width="10" height="14" /></>,
+  },
+  {
+    title: "Imóveis & terrenos",
+    text: "Para corretores e construtoras: anúncio com vista aérea, limites do lote e o entorno que valoriza o preço.",
+    cta: "Orçamento para imóvel",
+    href: WA.imovel,
+    icon: <><rect x="6" y="6" width="36" height="36" rx="2" /><path d="M6 24h36M24 6v36" /><circle cx="33" cy="15" r="4" /></>,
+  },
+  {
+    title: "Casamentos & eventos",
+    text: "Cerimônia na praia, festa, campeonato ou ação de empresa com a tomada aérea que todo mundo vai compartilhar.",
+    cta: "Orçamento para evento",
+    href: WA.evento,
+    icon: <><circle cx="24" cy="24" r="18" /><path d="M24 12v12l8 6" /></>,
+  },
+  {
+    title: "Restaurantes & comércio",
+    text: "Reels verticais de verdade (a câmera gira 90°) para o seu perfil parar o dedo de quem está na praia.",
+    cta: "Orçamento para comércio",
+    href: WA.comercio,
+    icon: <><rect x="15" y="4" width="18" height="40" rx="4" /><path d="M21 38h6" /></>,
+  },
+];
+
+const PACKAGES = [
+  {
+    name: "Essencial",
+    desc: "Para começar a aparecer de cima.",
+    items: ["1 local, voo rápido e objetivo", "Fotos aéreas editadas", "Vídeo vertical para Reels", "Entrega rápida por link, em alta qualidade"],
+  },
+  {
+    name: "Destaque",
+    desc: "O pacote completo para vender mais.",
+    hot: true,
+    items: ["Voo no melhor horário de luz", "Pacote completo de fotos aéreas", "Vídeo horizontal para site e Booking", "Reels verticais prontos", "Trilha, cor e entrega rápida"],
+  },
+  {
+    name: "Evento",
+    desc: "Cobertura aérea do seu dia.",
+    items: ["Cobertura aérea do evento", "Tomadas dos momentos-chave", "Vídeo resumo para compartilhar", "Fotos aéreas do grupo"],
+  },
+];
+
+// Ilustrações provisórias da galeria: trocar por fotos/vídeos reais do Instagram.
+const SHOTS = [
+  { title: "Orla de Porto", place: "Porto de Galinhas", tag: "TURISMO", deep: "#3F7A72", mid: "#8EC4AE", land: "#E4D2AE",
+    shallow: "M150 0 C 210 160 170 330 240 500 L 400 500 L 400 0 Z", sand: "M0 0 L 140 0 C 200 160 160 330 230 500 L 0 500 Z", foam: "M142 0 C 202 160 162 330 232 500" },
+  { title: "Faixa de areia", place: "Ipojuca", tag: "PAISAGEM", deep: "#4B7F78", mid: "#7FB5A2", land: "#DCC8A0",
+    shallow: "M0 260 C 120 230 260 300 400 250 L 400 500 L 0 500 Z", sand: "M0 0 L 400 0 L 400 230 C 260 280 120 210 0 240 Z", foam: "M0 245 C 120 215 260 285 400 235" },
+  { title: "Piscinas naturais", place: "Porto de Galinhas", tag: "TURISMO", deep: "#3F7A72", mid: "#A9DCC6", land: "#3A6B5C",
+    shallow: "M120 140 C 220 100 330 160 320 250 C 310 340 190 360 130 320 C 70 280 40 170 120 140 Z", sand: "M150 190 C 210 170 270 200 265 240 C 260 280 200 290 160 270 C 125 250 120 200 150 190 Z", foam: "M120 140 C 220 100 330 160 320 250" },
+  { title: "Praia limpa", place: "Ação de limpeza na orla", tag: "COMUNIDADE", deep: "#456F66", mid: "#86B9A4", land: "#D6C29A",
+    shallow: "M260 0 C 220 170 300 330 250 500 L 400 500 L 400 0 Z", sand: "M0 0 L 250 0 C 210 170 290 330 240 500 L 0 500 Z", foam: "M252 0 C 212 170 292 330 242 500" },
+  { title: "Rio e cidade", place: "Recife", tag: "URBANO", deep: "#6B6152", mid: "#7E9A8C", land: "#8C8170",
+    shallow: "M0 180 C 140 210 260 160 400 200 L 400 330 C 260 300 140 350 0 320 Z", sand: "M0 0 L 400 0 L 400 190 C 260 150 140 200 0 170 Z", foam: "M0 175 C 140 205 260 155 400 195" },
+];
+
+const STEPS = [
+  ["Chame no WhatsApp", "Conte o local e o que quer mostrar. O orçamento sai na conversa."],
+  ["Plano de voo", "Definimos o melhor horário de luz, maré e vento para o seu lugar."],
+  ["Captação", "Voo com vídeo 4K e fotos 48MP, na horizontal e na vertical."],
+  ["Pronto para postar", "Entrega rápida do material editado, nos formatos de feed, Reels e site."],
+];
+
+const muted = "#5C5143";
+const stepNum = { margin: "0 0 16px", fontSize: 52, fontWeight: 900, color: "#A8471A", lineHeight: 1 };
 
 export default function Home() {
-  // Shared ref holding the real-time physical properties of the drone.
-  // GSAP will animate this object, and the Canvas useFrame will apply it.
-  const droneState = useRef({
-    x: 0,
-    y: 0,
-    z: 2,
-    rotX: 0,
-    rotY: 0,
-    rotZ: 0,
-    scale: 1,
-    speed: 0,
-    progress: 0,
-  });
-
-  const scrollWrapperRef = useRef(null);
-  const [formSubmitted, setFormSubmitted] = useState(false);
-  const [activeSection, setActiveSection] = useState(0);
-
-  // Form states
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [projectType, setProjectType] = useState('Commercial');
-  const [message, setMessage] = useState('');
-
-  useEffect(() => {
-    // Only run on client
-    if (typeof window !== 'undefined') {
-      gsap.registerPlugin(ScrollTrigger);
-
-      const mm = gsap.matchMedia();
-
-      // ================= MOBILE LAYOUT TIMELINE (< 768px) =================
-      mm.add("(max-width: 767px)", () => {
-        // Reset properties to mobile defaults
-        droneState.current.x = 0;
-        droneState.current.y = 0.4;
-        droneState.current.z = 2.2;
-        droneState.current.scale = 1;
-
-        const tl = gsap.timeline({
-          scrollTrigger: {
-            trigger: scrollWrapperRef.current,
-            start: 'top top',
-            end: 'bottom bottom',
-            scrub: 1.5,
-            onUpdate: (self) => {
-              const velocity = self.getVelocity() / 2500;
-              droneState.current.speed = Math.min(1.2, Math.abs(velocity));
-              droneState.current.progress = self.progress;
-
-              const newSection = Math.min(4, Math.floor(self.progress * 4.9));
-              setActiveSection(newSection);
-            },
-          },
-        });
-
-        // HERO -> ABOUT
-        // Perform a loop in the transition, but scale down to 0 as it approaches the About reading block
-        tl.to(droneState.current, {
-          x: 0.8,
-          y: 0.8,
-          z: 1.6,
-          rotX: -0.3,
-          rotY: 0.5,
-          rotZ: -0.5,
-          scale: 0.8,
-          duration: 0.2,
-          ease: 'sine.inOut',
-        })
-        .to(droneState.current, {
-          x: 0,
-          y: 1.5,
-          z: 0.8,
-          rotX: -0.8,
-          rotY: 1.2,
-          rotZ: -0.8,
-          scale: 0.5,
-          duration: 0.2,
-          ease: 'sine.inOut',
-        })
-        .to(droneState.current, {
-          x: -0.8,
-          y: 0.4,
-          z: 1.2,
-          rotX: 0.3,
-          rotY: 1.8,
-          rotZ: -0.2,
-          scale: 0.2,
-          duration: 0.25,
-          ease: 'sine.inOut',
-        })
-        // Settle at About: completely hidden
-        .to(droneState.current, {
-          x: -2.5,
-          y: 0.0,
-          z: 1.5,
-          rotX: 0.0,
-          rotY: Math.PI / 2,
-          rotZ: 0.0,
-          scale: 0,
-          duration: 0.15,
-          ease: 'power2.out',
-        })
-
-        // ABOUT -> SERVICES
-        // Reappear for the descent arch curve transition, then scale down to 0 for Services reading block
-        .to(droneState.current, {
-          x: -0.5,
-          y: 0.8,
-          z: 1.2,
-          rotX: -0.3,
-          rotY: 0.8,
-          rotZ: 0.5,
-          scale: 0.8,
-          duration: 0.4,
-          ease: 'power1.out',
-        })
-        .to(droneState.current, {
-          x: 0.8,
-          y: -0.2,
-          z: 1.0,
-          rotX: 0.5,
-          rotY: 2.4,
-          rotZ: 0.25,
-          scale: 0.4,
-          duration: 0.35,
-          ease: 'power2.in',
-        })
-        // Settle at Services: completely hidden
-        .to(droneState.current, {
-          x: 1.8,
-          y: -0.5,
-          z: 1.0,
-          rotX: 0.0,
-          rotY: Math.PI,
-          rotZ: 0.0,
-          scale: 0,
-          duration: 0.25,
-          ease: 'power2.out',
-        })
-
-        // SERVICES -> PORTFOLIO
-        // Settle deep in the background at Portfolio where it won't block photo grids
-        .to(droneState.current, {
-          x: 0,
-          y: 1.2,
-          z: -2.2,
-          rotX: 0.1,
-          rotY: Math.PI * 1.3,
-          rotZ: 0.05,
-          scale: 0.7,
-          duration: 1.0,
-          ease: 'power2.inOut',
-        })
-
-        // PORTFOLIO -> CONTACT
-        // Disappear completely for the form-filling Contact section
-        .to(droneState.current, {
-          x: 0.5,
-          y: -0.2,
-          z: 1.8,
-          rotX: 0.12,
-          rotY: Math.PI * 2.15,
-          rotZ: -0.15,
-          scale: 0,
-          duration: 1.0,
-          ease: 'power2.inOut',
-        });
-      });
-
-      // ================= DESKTOP LAYOUT TIMELINE (>= 768px) =================
-      mm.add("(min-width: 768px)", () => {
-        // Reset properties to desktop defaults
-        droneState.current.x = 0;
-        droneState.current.y = 0;
-        droneState.current.z = 2;
-        droneState.current.scale = 1;
-
-        const tl = gsap.timeline({
-          scrollTrigger: {
-            trigger: scrollWrapperRef.current,
-            start: 'top top',
-            end: 'bottom bottom',
-            scrub: 1.5,
-            onUpdate: (self) => {
-              const velocity = self.getVelocity() / 2500;
-              droneState.current.speed = Math.min(1.2, Math.abs(velocity));
-              droneState.current.progress = self.progress;
-
-              const newSection = Math.min(4, Math.floor(self.progress * 4.9));
-              setActiveSection(newSection);
-            },
-          },
-        });
-
-        // HERO -> ABOUT
-        tl.to(droneState.current, {
-          x: 1.6,
-          y: 1.0,
-          z: 1.4,
-          rotX: -0.35,
-          rotY: 0.5,
-          rotZ: -0.65,
-          scale: 1,
-          duration: 0.3,
-          ease: 'sine.inOut',
-        })
-        .to(droneState.current, {
-          x: 0,
-          y: 2.0,
-          z: 0.6,
-          rotX: -0.95,
-          rotY: 1.5,
-          rotZ: -1.0,
-          scale: 1,
-          duration: 0.3,
-          ease: 'sine.inOut',
-        })
-        .to(droneState.current, {
-          x: -1.6,
-          y: 0.6,
-          z: 1.0,
-          rotX: 0.45,
-          rotY: 2.2,
-          rotZ: -0.3,
-          scale: 1,
-          duration: 0.25,
-          ease: 'sine.inOut',
-        })
-        .to(droneState.current, {
-          x: -2.5,
-          y: 0.0,
-          z: 1.5,
-          rotX: 0.0,
-          rotY: Math.PI / 2,
-          rotZ: 0.0,
-          scale: 1,
-          duration: 0.15,
-          ease: 'power2.out',
-        })
-
-        // ABOUT -> SERVICES
-        .to(droneState.current, {
-          x: -0.5,
-          y: 1.2,
-          z: 1.2,
-          rotX: -0.3,
-          rotY: 0.8,
-          rotZ: 0.5,
-          scale: 1,
-          duration: 0.4,
-          ease: 'power1.out',
-        })
-        .to(droneState.current, {
-          x: 1.2,
-          y: -0.1,
-          z: 1.0,
-          rotX: 0.5,
-          rotY: 2.4,
-          rotZ: 0.25,
-          scale: 1,
-          duration: 0.35,
-          ease: 'power2.in',
-        })
-        .to(droneState.current, {
-          x: 1.8,
-          y: -0.5,
-          z: 1.0,
-          rotX: 0.0,
-          rotY: Math.PI,
-          rotZ: 0.0,
-          scale: 1,
-          duration: 0.25,
-          ease: 'power2.out',
-        })
-
-        // SERVICES -> PORTFOLIO
-        .to(droneState.current, {
-          x: 1.3,
-          y: 1.5,
-          z: -1.8,
-          rotX: 0.1,
-          rotY: Math.PI * 1.3,
-          rotZ: 0.05,
-          scale: 1,
-          duration: 1.0,
-          ease: 'power2.inOut',
-        })
-
-        // PORTFOLIO -> CONTACT
-        .to(droneState.current, {
-          x: 0.8,
-          y: -0.2,
-          z: 1.8,
-          rotX: 0.12,
-          rotY: Math.PI * 2.15,
-          rotZ: -0.15,
-          scale: 1,
-          duration: 1.0,
-          ease: 'power2.inOut',
-        });
-      });
-
-      return () => mm.revert();
-    }
-  }, []);
-
-  const handleFormSubmit = async (e) => {
-    e.preventDefault();
-    if (!name || !email) return;
-
-    setFormSubmitted(true);
-    
-    // Wow factor confetti - dynamic client import to prevent SSR build issues
-    try {
-      const { default: confetti } = await import('canvas-confetti');
-      confetti({
-        particleCount: 150,
-        spread: 80,
-        origin: { y: 0.6 },
-        colors: ['#e2e8f0', '#f59e0b', '#334155'],
-      });
-    } catch (err) {
-      console.error("Failed to load confetti", err);
-    }
-
-    // Reset form after delay
-    setTimeout(() => {
-      setName('');
-      setEmail('');
-      setProjectType('Commercial');
-      setMessage('');
-      setFormSubmitted(false);
-    }, 6000);
-  };
-
-  const scrollToSection = (index) => {
-    const sections = ['hero', 'about', 'services', 'portfolio', 'contact'];
-    const element = document.getElementById(sections[index]);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
+  const ticker = [...PLACES, ...PLACES];
 
   return (
-    <div className="relative w-full h-full min-h-screen text-slate-100 bg-transparent overflow-x-hidden selection:bg-amber-500/30 selection:text-amber-200">
-      
-      {/* 3D Scene Background Canvas */}
-      <DroneScene droneState={droneState} />
+    <div style={{ overflowX: "hidden", minHeight: "100vh" }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <Header />
 
-      {/* Dynamic Telemetry HUD overlay */}
-      <TelemetryHUD droneState={droneState} />
+      <main>
+        <Hero />
 
-      {/* Floating Side Dot Navigation - Hidden on Small Screens for Cleaner Layout */}
-      <div className="fixed right-3 sm:right-6 top-1/2 -translate-y-1/2 flex flex-col gap-3 sm:gap-4 z-50 pointer-events-auto bg-black/30 backdrop-blur-md p-2.5 sm:p-3 rounded-full border border-zinc-800/30 hidden sm:flex">
-        {[0, 1, 2, 3, 4].map((index) => (
-          <button
-            key={index}
-            onClick={() => scrollToSection(index)}
-            aria-label={`Ir para seção ${index + 1}`}
-            className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full transition-all duration-300 ${
-              activeSection === index
-                ? 'bg-amber-400 scale-125 shadow-[0_0_8px_rgba(245,158,11,0.8)]'
-                : 'bg-zinc-600 hover:bg-zinc-400'
-            }`}
-          />
-        ))}
-      </div>
-
-      {/* Main Scroll Content Overlay */}
-      <div id="scroll-wrapper" ref={scrollWrapperRef} className="relative z-10 w-full">
-        
-        {/* ================= SEÇÃO 1: HERO ================= */}
-        <section
-          id="hero"
-          className="relative flex flex-col justify-between items-center w-full min-h-screen pt-20 pb-12 sm:pt-24 sm:pb-16 px-4 sm:px-12 md:px-24"
-        >
-          {/* Transparent Header branding */}
-          <div className="w-full flex justify-between items-center z-30">
-            <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
-              <span className="font-mono text-xs sm:text-sm tracking-[0.25em] font-bold text-zinc-100 uppercase">SKYFLOW</span>
-            </div>
-            <div className="text-zinc-500 font-mono text-[9px] sm:text-xs tracking-widest">
-              DJI MINI 3 | CAPTAÇÃO 4K HDR
-            </div>
-          </div>
-
-          {/* Hero text */}
-          <div className="max-w-4xl text-center flex flex-col items-center gap-4 sm:gap-6 mt-16 sm:mt-24 pointer-events-auto px-2">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-amber-400/20 bg-amber-950/30 text-amber-400 font-mono text-[10px] sm:text-xs tracking-widest uppercase">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-              Filmagens com Drone
-            </div>
-            
-            <h1 className="text-3xl sm:text-6xl md:text-8xl font-black tracking-tighter text-zinc-50 uppercase leading-none select-none">
-              PERSPECTIVAS <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-zinc-200 to-amber-500">
-                INFINITAS
+        <div aria-label="Regiões atendidas" style={{ borderTop: "1px solid rgba(33,27,20,.12)", borderBottom: "1px solid rgba(33,27,20,.12)", padding: "20px 0", overflow: "hidden", background: "#E9DEC9" }}>
+          <div className="track">
+            {ticker.map((name, i) => (
+              <span key={i} className="xp" style={{ display: "flex", alignItems: "center", gap: 32, paddingRight: 32, fontWeight: 800, fontSize: "clamp(18px, 2.4vw, 28px)", textTransform: "uppercase", whiteSpace: "nowrap", color: i % 2 ? "#A8471A" : "#211B14" }}>
+                {name}
+                <Sparkle />
               </span>
-            </h1>
-            
-            <p className="max-w-xl text-sm sm:text-base md:text-lg text-zinc-400 leading-relaxed font-light tracking-wide mt-2">
-              Imagens aéreas de alta qualidade capturadas em Nossa Senhora do Ó e toda a região de Ipojuca/Porto de Galinhas. 
-              Dê destaque para seu comércio, eventos e imóveis.
-            </p>
-
-            <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mt-3 sm:mt-4">
-              <button
-                onClick={() => scrollToSection(1)}
-                className="px-5 py-2.5 sm:px-6 sm:py-3 rounded-full text-zinc-950 bg-amber-400 font-semibold tracking-wide hover:bg-amber-300 hover:scale-105 transition-all duration-300 cursor-pointer shadow-lg shadow-amber-950/20 text-xs sm:text-sm"
-              >
-                Conhecer Trabalho
-              </button>
-              <button
-                onClick={() => scrollToSection(4)}
-                className="px-5 py-2.5 sm:px-6 sm:py-3 rounded-full border border-zinc-700 bg-zinc-900/30 font-semibold tracking-wide hover:bg-zinc-800 hover:border-zinc-500 transition-all duration-300 cursor-pointer text-xs sm:text-sm"
-              >
-                Falar com Juninho
-              </button>
-            </div>
+            ))}
           </div>
+        </div>
 
-          {/* Scroll instruction indicator */}
-          <div className="flex flex-col items-center gap-1.5 pointer-events-auto cursor-pointer z-10" onClick={() => scrollToSection(1)}>
-            <span className="font-mono text-[8px] sm:text-xxs tracking-[0.3em] uppercase text-zinc-500 hover:text-amber-400 transition-colors">
-              Role para Voar (Scroll)
-            </span>
-            <div className="w-4 h-7 rounded-full border border-zinc-700/80 flex justify-center p-0.5">
-              <div className="w-0.5 h-1.5 bg-amber-400 rounded-full animate-bounce mt-0.5" />
+        {/* PROBLEMA */}
+        <section className="sec" aria-labelledby="t-problema">
+          <div className="wrap g-2">
+            <div className="rv-l">
+              <p className="eyebrow">O problema</p>
+              <h2 id="t-problema" className="h2">Foto de celular não mostra o pé na areia</h2>
+              <p className="lead" style={{ marginTop: 24, maxWidth: 480 }}>O cliente decide em segundos, rolando o Instagram ou o Airbnb. Se a sua imagem parece igual à do vizinho, ele passa direto.</p>
+            </div>
+            <div>
+              {PAINS.map(([title, text]) => (
+                <div className="pain rv" key={title}>
+                  <span className="x" aria-hidden="true"><XIcon /></span>
+                  <div>
+                    <h3 style={{ margin: "0 0 6px", fontSize: 19 }}>{title}</h3>
+                    <p style={{ margin: 0, color: muted, lineHeight: 1.55 }}>{text}</p>
+                  </div>
+                </div>
+              ))}
+              <div className="rv" style={{ borderTop: "1px solid rgba(33,27,20,.14)", paddingTop: 26 }}>
+                <p className="xp" style={{ margin: 0, fontWeight: 900, fontSize: "clamp(22px, 2.6vw, 32px)", lineHeight: 1.1, textTransform: "uppercase" }}>
+                  Com o drone, a primeira imagem <span style={{ color: "#A8471A" }}>já vende.</span>
+                </p>
+              </div>
             </div>
           </div>
         </section>
 
-
-        {/* ================= SEÇÃO 2: SOBRE ================= */}
-        <section
-          id="about"
-          className="relative flex items-center w-full min-h-screen py-16 sm:py-24 px-4 sm:px-12 md:px-24 bg-gradient-to-r from-transparent to-black/40"
-        >
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 w-full z-10">
-            {/* Left side empty on desktop to let the DJI Mini 3 show off its profile Y rotation */}
-            <div className="hidden md:block md:col-span-5 lg:col-span-6" />
-
-            {/* Right side Text Block - with dark background card on mobile for readability */}
-            <div className="md:col-span-7 lg:col-span-6 flex flex-col justify-center gap-4 sm:gap-6 bg-black/60 sm:bg-transparent backdrop-blur-md sm:backdrop-blur-none p-5 sm:p-0 rounded-2xl border border-zinc-800/40 sm:border-none pointer-events-auto">
-              <div className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs text-amber-400 tracking-widest font-mono uppercase">
-                [ 02 / O PILOTO ]
+        {/* PARA QUEM */}
+        <section id="para-quem" className="sec" style={{ paddingTop: 0 }} aria-labelledby="t-para-quem">
+          <div className="wrap">
+            <div className="head-row">
+              <div className="rv-l">
+                <p className="eyebrow">Para quem é</p>
+                <h2 id="t-para-quem" className="h2">Feito para<br />quem vende aqui</h2>
               </div>
-              <h2 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight text-zinc-50 uppercase leading-tight">
-                A LENTE DE <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-500 font-bold">
-                  JUNINHO
-                </span>
-              </h2>
-              
-              <div className="h-0.5 w-12 sm:w-16 bg-amber-400" />
+              <p className="lead rv" style={{ maxWidth: 420 }}>Escolha o seu caso: o orçamento já chega no WhatsApp com o assunto certo.</p>
+            </div>
+            <div className="g-4">
+              {SEGMENTS.map((s) => (
+                <article className="card rv" key={s.title}>
+                  <svg className="ic" width="44" height="44" viewBox="0 0 48 48" fill="none" stroke="#A8471A" strokeWidth="2" strokeLinecap="round" aria-hidden="true">{s.icon}</svg>
+                  <h3 className="xp" style={{ margin: "8px 0 0", fontSize: 22, fontWeight: 800, textTransform: "uppercase", lineHeight: 1.05 }}>{s.title}</h3>
+                  <p style={{ margin: 0, fontSize: 16, lineHeight: 1.55, color: muted }}>{s.text}</p>
+                  <a className="card-link" href={s.href}>{s.cta} <ArrowIcon /></a>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
 
-              <p className="text-zinc-300 leading-relaxed font-light tracking-wide text-xs sm:text-sm md:text-base">
-                Eae! Sou o Juninho, piloto de drone baseado em Nossa Senhora do Ó, Ipojuca. Especializado em tomadas aéreas dinâmicas usando o DJI Mini 3, capturando as belezas naturais e urbanas do litoral pernambucano por ângulos totalmente inovadores.
-              </p>
-              
-              <p className="text-zinc-400 leading-relaxed font-light text-xs sm:text-xs">
-                O DJI Mini 3 é o drone ultraleve perfeito com apenas 249g, permitindo voos ágeis e seguros. Equipado com o sensor HDR nativo e abertura f/1.7, capto fotos em 48MP e vídeos em 4K extremamente nítidos mesmo com pouca luz. Além disso, a câmera rotaciona 90 graus para filmagens verticais reais, ideal para Reels e TikTok.
-              </p>
+        <div aria-hidden="true" style={{ overflow: "hidden", paddingBottom: "clamp(56px, 8vw, 110px)" }}>
+          <p className="xp slide-big" style={{ margin: 0, whiteSpace: "nowrap", fontWeight: 900, fontSize: "clamp(72px, 15vw, 240px)", lineHeight: 0.9, textTransform: "uppercase", color: "transparent", WebkitTextStroke: "2px rgba(168,71,26,.55)" }}>
+            Quem vê de cima, reserva · Quem vê de cima, reserva ·
+          </p>
+        </div>
 
-              {/* Stats HUD layout */}
-              <div className="grid grid-cols-3 gap-2 sm:gap-4 mt-2 bg-zinc-950/60 backdrop-blur-md p-3 sm:p-4 rounded-xl border border-zinc-850 font-mono text-center sm:text-left">
+        {/* EQUIPAMENTO */}
+        <section style={{ padding: "0 0 clamp(72px, 11vw, 150px)" }} aria-labelledby="t-equip">
+          <div className="wrap">
+            <div className="grow" style={{ background: "#211B14", color: "#F3ECDF", borderRadius: 24, padding: "clamp(28px, 5vw, 72px)" }}>
+              <div className="head-row" style={{ marginBottom: "clamp(32px, 4vw, 56px)" }}>
                 <div>
-                  <div className="text-xl sm:text-2xl font-black text-amber-400">4K HDR</div>
-                  <div className="text-[7px] sm:text-xxs text-zinc-500 uppercase tracking-wider mt-1">Alta Resolução</div>
+                  <p className="eyebrow" style={{ color: "#E39A6E" }}>Qualidade de cinema</p>
+                  <h2 id="t-equip" className="h2" style={{ fontSize: "clamp(32px, 5vw, 72px)" }}>DJI Mini 3 no ar</h2>
                 </div>
-                <div className="border-l border-zinc-800 pl-2.5 sm:pl-4">
-                  <div className="text-xl sm:text-2xl font-black text-zinc-100">f/1.7</div>
-                  <div className="text-[7px] sm:text-xxs text-zinc-500 uppercase tracking-wider mt-1">Super Abertura</div>
-                </div>
-                <div className="border-l border-zinc-800 pl-2.5 sm:pl-4">
-                  <div className="text-xl sm:text-2xl font-black text-zinc-100">249g</div>
-                  <div className="text-[7px] sm:text-xxs text-zinc-500 uppercase tracking-wider mt-1">Peso Ultraleve</div>
-                </div>
+                <p style={{ margin: 0, maxWidth: 420, fontSize: 17, lineHeight: 1.6, color: "#D9CFBF" }}>Leve, silencioso e seguro perto de pessoas e construções. Sensor HDR que aguenta o sol forte do meio-dia e o dourado do fim de tarde.</p>
               </div>
+              <Stats />
             </div>
           </div>
         </section>
 
-
-        {/* ================= SEÇÃO 3: SERVIÇOS ================= */}
-        <section
-          id="services"
-          className="relative flex items-center w-full min-h-screen py-16 sm:py-24 px-4 sm:px-12 md:px-24 bg-gradient-to-l from-transparent to-black/40"
-        >
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 w-full z-10">
-            {/* Left side text block - with background card on mobile */}
-            <div className="md:col-span-7 lg:col-span-6 flex flex-col justify-center gap-4 sm:gap-6 bg-black/60 sm:bg-transparent backdrop-blur-md sm:backdrop-blur-none p-5 sm:p-0 rounded-2xl border border-zinc-800/40 sm:border-none pointer-events-auto">
-              <div className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs text-amber-400 tracking-widest font-mono uppercase">
-                [ 03 / SERVIÇOS ]
+        {/* PACOTES */}
+        <section id="pacotes" className="sec" style={{ paddingTop: 0 }} aria-labelledby="t-pacotes">
+          <div className="wrap">
+            <div className="head-row">
+              <div className="rv-l">
+                <p className="eyebrow">Pacotes</p>
+                <h2 id="t-pacotes" className="h2">Escolha<br />o seu voo</h2>
               </div>
-              <h2 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight text-zinc-50 uppercase leading-tight">
-                VÍDEOS QUE <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-500 font-bold">
-                  DESTACAM
+              <p className="lead rv" style={{ maxWidth: 420 }}>Orçamento sob medida e sem compromisso, direto no WhatsApp. Precisa de algo diferente? A gente monta junto.</p>
+            </div>
+            <div className="g-3 pkg-wrap">
+              {PACKAGES.map((k) => (
+                <article className={`pkg rv ${k.hot ? "hot" : ""}`} key={k.name}>
+                  {k.hot && <span className="badge">Ideal para pousadas</span>}
+                  <div>
+                    <h3 className="xp" style={{ margin: "0 0 6px", fontSize: 26, fontWeight: 900, textTransform: "uppercase" }}>{k.name}</h3>
+                    <p style={{ margin: 0, fontSize: 15, lineHeight: 1.5, color: k.hot ? "#D9CFBF" : muted }}>{k.desc}</p>
+                  </div>
+                  <ul>
+                    {k.items.map((it) => (
+                      <li key={it}><CheckIcon color={k.hot ? "#E39A6E" : "#A8471A"} style={{ flex: "0 0 auto", marginTop: 2 }} /><span>{it}</span></li>
+                    ))}
+                  </ul>
+                  <a className={`btn ${k.hot ? "btn-main" : "btn-ghost"}`} href={wa(`Olá! Quero o pacote ${k.name} de filmagem com drone.`)} style={{ marginTop: "auto", width: "100%" }}>
+                    {`Quero o ${k.name}`}
+                  </a>
+                </article>
+              ))}
+            </div>
+            <p className="rv" style={{ margin: "28px 0 0", textAlign: "center", fontSize: 14, color: muted }}>Alta temporada (dezembro a fevereiro) e fins de semana lotam primeiro. Garanta a sua data.</p>
+          </div>
+        </section>
+
+        {/* VOOS */}
+        <section id="voos" className="sec" style={{ paddingTop: 0 }} aria-labelledby="t-voos">
+          <div className="wrap">
+            <div className="head-row">
+              <div className="rv-l">
+                <p className="eyebrow">Voos recentes</p>
+                <h2 id="t-voos" className="h2">Do feed<br /><span style={{ fontSize: ".62em", letterSpacing: 0 }}>@droneportope</span></h2>
+              </div>
+              <a className="btn btn-ghost rv" href={INSTAGRAM} target="_blank" rel="noopener"><InstagramIcon />Ver no Instagram</a>
+            </div>
+          </div>
+          <div className="rail" role="list">
+            {SHOTS.map((sh) => (
+              <a key={sh.title} className="shot rv" role="listitem" href={INSTAGRAM} target="_blank" rel="noopener" style={{ textDecoration: "none", color: "#FFFDF7" }}>
+                <svg className="bg" viewBox="0 0 400 500" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                  <rect width="400" height="500" fill={sh.deep} />
+                  <path d={sh.shallow} fill={sh.mid} />
+                  <path d={sh.sand} fill={sh.land} />
+                  <path className="foam" d={sh.foam} stroke="#FFFDF7" strokeWidth="4" fill="none" strokeLinecap="round" />
+                </svg>
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(33,27,20,.88) 0%, rgba(33,27,20,0) 55%)" }} />
+                <span className="mono" style={{ position: "absolute", top: 16, left: 16, fontSize: 11, letterSpacing: ".1em", background: "rgba(33,27,20,.75)", padding: "6px 10px", borderRadius: 6 }}>{sh.tag}</span>
+                <span className="play" style={{ position: "absolute", top: 12, right: 12, width: 44, height: 44, borderRadius: "50%", background: "rgba(255,253,247,.92)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2l10 6-10 6z" fill="#211B14" /></svg>
                 </span>
-              </h2>
-
-              <div className="h-0.5 w-12 sm:w-16 bg-amber-400" />
-
-              <p className="text-zinc-300 leading-relaxed font-light text-xs sm:text-sm md:text-base">
-                Produções sob medida para valorizar negócios locais, turismo e o mercado residencial na região de Ipojuca.
-              </p>
-
-              {/* Interactive Services List */}
-              <div className="flex flex-col gap-3 mt-1">
-                
-                <div className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-zinc-850 bg-zinc-950/20 hover:border-amber-400/30 hover:bg-zinc-900/10 transition-all duration-300 group">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 font-mono text-xs sm:text-sm font-bold group-hover:bg-amber-400 group-hover:text-zinc-950 transition-all duration-300">
-                    1
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-zinc-200 text-xs sm:text-sm group-hover:text-zinc-50">Comércio & Negócios</h3>
-                    <p className="text-[10px] sm:text-xs text-zinc-400 mt-1 leading-relaxed">
-                      Apresente sua pousada, hotel, restaurante ou comércio local com tomadas aéreas dinâmicas que atraem muito mais clientes no Instagram.
-                    </p>
-                  </div>
+                <div style={{ position: "absolute", left: 20, right: 20, bottom: 20 }}>
+                  <h3 className="xp" style={{ margin: "0 0 6px", fontWeight: 800, fontSize: 21, textTransform: "uppercase", lineHeight: 1.05 }}>{sh.title}</h3>
+                  <p style={{ margin: 0, fontSize: 14, color: "#EDE3D2" }}>{sh.place}</p>
                 </div>
-
-                <div className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-zinc-850 bg-zinc-950/20 hover:border-amber-400/30 hover:bg-zinc-900/10 transition-all duration-300 group">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 font-mono text-xs sm:text-sm font-bold group-hover:bg-amber-400 group-hover:text-zinc-950 transition-all duration-300">
-                    2
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-zinc-200 text-xs sm:text-sm group-hover:text-zinc-50">Mercado Imobiliário</h3>
-                    <p className="text-[10px] sm:text-xs text-zinc-400 mt-1 leading-relaxed">
-                      Fotos e vídeos aéreos incríveis de terrenos, casas e condomínios, exibindo a infraestrutura e a bela proximidade com as praias.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-zinc-850 bg-zinc-950/20 hover:border-amber-400/30 hover:bg-zinc-900/10 transition-all duration-300 group">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 font-mono text-xs sm:text-sm font-bold group-hover:bg-amber-400 group-hover:text-zinc-950 transition-all duration-300">
-                    3
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-zinc-200 text-xs sm:text-sm group-hover:text-zinc-50">Cobertura de Eventos</h3>
-                    <p className="text-[10px] sm:text-xs text-zinc-400 mt-1 leading-relaxed">
-                      Registre confraternizações, casamentos, eventos esportivos e comemorações com ângulos amplos e movimentos de câmera surpreendentes.
-                    </p>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
-            {/* Right side empty on desktop to let the DJI Mini 3 show off its pilot Y rotation */}
-            <div className="hidden md:block md:col-span-5 lg:col-span-6" />
+              </a>
+            ))}
           </div>
         </section>
 
-
-        {/* ================= SEÇÃO 4: TRABALHOS (PORTFÓLIO GRID) ================= */}
-        <section
-          id="portfolio"
-          className="relative flex flex-col justify-center w-full min-h-screen py-16 sm:py-24 px-4 sm:px-12 md:px-24"
-        >
-          <div className="max-w-6xl mx-auto w-full flex flex-col gap-6 sm:gap-8 pointer-events-auto">
-            
-            {/* Header section title */}
-            <div className="flex flex-col gap-2">
-              <div className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs text-amber-400 tracking-widest font-mono uppercase">
-                [ 04 / PROJETOS DE VOO ]
-              </div>
-              <h2 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight text-zinc-50 uppercase leading-none">
-                GALERIA <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-500 font-bold">DE VOO</span>
-              </h2>
-              <p className="text-xs sm:text-sm text-zinc-400 max-w-xl font-light">
-                Explore algumas produções aéreas recentes. O drone DJI Mini 3 se afasta no fundo para não bloquear as fotos do portfólio.
-              </p>
-            </div>
-
-            {/* Premium CSS Grid of Video Blocks */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mt-2">
-              
-              {/* Card 1 */}
-              <div className="relative group overflow-hidden rounded-2xl bg-zinc-900/40 border border-zinc-800/60 backdrop-blur-md aspect-video sm:aspect-square flex flex-col justify-end p-5 cursor-pointer hover:border-amber-400/50 hover:shadow-[0_0_15px_rgba(245,158,11,0.15)] transition-all duration-500">
-                {/* Background high-tech gradient */}
-                <div className="absolute inset-0 bg-gradient-to-br from-amber-950/20 via-zinc-900/60 to-[#0e1115] -z-10 group-hover:scale-105 transition-transform duration-700" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent" />
-                
-                {/* Visual Camera lens look overlay */}
-                <div className="absolute top-3 right-3 flex items-center justify-center w-7 h-7 rounded-full border border-zinc-800 bg-zinc-950/70 opacity-60 group-hover:opacity-100 transition-opacity">
-                  <span className="w-2 h-2 rounded-full bg-red-500 group-hover:animate-ping" />
+        {/* COMO FUNCIONA */}
+        <section id="como" className="sec" style={{ paddingTop: 0 }} aria-labelledby="t-como">
+          <div className="wrap">
+            <p className="eyebrow rv">Como funciona</p>
+            <h2 id="t-como" className="h2 rv" style={{ marginBottom: "clamp(36px, 5vw, 64px)" }}>Da mensagem<br />ao post em 4 passos</h2>
+            <div className="g-4">
+              {STEPS.map(([title, text], i) => (
+                <div className="step rv" key={title}>
+                  <p className="xp" style={stepNum}>0{i + 1}</p>
+                  <h3 style={{ margin: "0 0 8px", fontSize: 20 }}>{title}</h3>
+                  <p style={{ margin: 0, fontSize: 16, lineHeight: 1.55, color: muted }}>{text}</p>
                 </div>
-
-                <div className="relative z-10 flex flex-col gap-1">
-                  <span className="font-mono text-[8px] sm:text-xxs text-amber-400 font-bold tracking-widest uppercase">TURISMO / LAZER</span>
-                  <h3 className="font-bold text-zinc-100 text-base sm:text-lg tracking-tight group-hover:text-amber-300 transition-colors">Porto de Galinhas</h3>
-                  <p className="text-[10px] sm:text-xxs text-zinc-400 leading-normal font-light">
-                    Mergulho de câmera revelando as piscinas naturais e os corais sob luz dourada matinal.
-                  </p>
-                </div>
-              </div>
-
-              {/* Card 2 */}
-              <div className="relative group overflow-hidden rounded-2xl bg-zinc-900/40 border border-zinc-800/60 backdrop-blur-md aspect-video sm:aspect-square flex flex-col justify-end p-5 cursor-pointer hover:border-amber-400/50 hover:shadow-[0_0_15px_rgba(245,158,11,0.15)] transition-all duration-500">
-                <div className="absolute inset-0 bg-gradient-to-br from-sky-950/20 via-zinc-900/60 to-[#0e1115] -z-10 group-hover:scale-105 transition-transform duration-700" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent" />
-                
-                <div className="absolute top-3 right-3 flex items-center justify-center w-7 h-7 rounded-full border border-zinc-800 bg-zinc-950/70 opacity-60 group-hover:opacity-100 transition-opacity">
-                  <span className="w-2 h-2 rounded-full bg-sky-500" />
-                </div>
-
-                <div className="relative z-10 flex flex-col gap-1">
-                  <span className="font-mono text-[8px] sm:text-xxs text-sky-400 font-bold tracking-widest uppercase">IMOBILIÁRIO</span>
-                  <h3 className="font-bold text-zinc-100 text-base sm:text-lg tracking-tight group-hover:text-amber-300 transition-colors">Residencial Ó</h3>
-                  <p className="text-[10px] sm:text-xxs text-zinc-400 leading-normal font-light">
-                    Voo rasante sobre a fachada e área de lazer comum, destacando a arquitetura integrada.
-                  </p>
-                </div>
-              </div>
-
-              {/* Card 3 */}
-              <div className="relative group overflow-hidden rounded-2xl bg-zinc-900/40 border border-zinc-800/60 backdrop-blur-md aspect-video sm:aspect-square flex flex-col justify-end p-5 cursor-pointer hover:border-amber-400/50 hover:shadow-[0_0_15px_rgba(245,158,11,0.15)] transition-all duration-500">
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-950/20 via-zinc-900/60 to-[#0e1115] -z-10 group-hover:scale-105 transition-transform duration-700" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent" />
-                
-                <div className="absolute top-3 right-3 flex items-center justify-center w-7 h-7 rounded-full border border-zinc-800 bg-zinc-950/70 opacity-60 group-hover:opacity-100 transition-opacity">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                </div>
-
-                <div className="relative z-10 flex flex-col gap-1">
-                  <span className="font-mono text-[8px] sm:text-xxs text-emerald-400 font-bold tracking-widest uppercase">COMÉRCIO LOCAL</span>
-                  <h3 className="font-bold text-zinc-100 text-base sm:text-lg tracking-tight group-hover:text-amber-300 transition-colors">Pousada Mar Azul</h3>
-                  <p className="text-[10px] sm:text-xxs text-zinc-400 leading-normal font-light">
-                    Clipe de divulgação aérea evidenciando a proximidade da praia e a piscina com vista mar.
-                  </p>
-                </div>
-              </div>
-
-              {/* Card 4 */}
-              <div className="relative group overflow-hidden rounded-2xl bg-zinc-900/40 border border-zinc-800/60 backdrop-blur-md aspect-video sm:aspect-square flex flex-col justify-end p-5 cursor-pointer hover:border-amber-400/50 hover:shadow-[0_0_15px_rgba(245,158,11,0.15)] transition-all duration-500">
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/20 via-zinc-900/60 to-[#0e1115] -z-10 group-hover:scale-105 transition-transform duration-700" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent" />
-                
-                <div className="absolute top-3 right-3 flex items-center justify-center w-7 h-7 rounded-full border border-zinc-800 bg-zinc-950/70 opacity-60 group-hover:opacity-100 transition-opacity">
-                  <span className="w-2 h-2 rounded-full bg-indigo-500" />
-                </div>
-
-                <div className="relative z-10 flex flex-col gap-1">
-                  <span className="font-mono text-[8px] sm:text-xxs text-indigo-400 font-bold tracking-widest uppercase">PAISAGISMO</span>
-                  <h3 className="font-bold text-zinc-100 text-base sm:text-lg tracking-tight group-hover:text-amber-300 transition-colors">Orla de Ipojuca</h3>
-                  <p className="text-[10px] sm:text-xxs text-zinc-400 leading-normal font-light">
-                    Panorâmica em 4K acompanhando as palmeiras e as praias de areia branca da nossa costa.
-                  </p>
-                </div>
-              </div>
-
+              ))}
             </div>
           </div>
         </section>
 
-
-        {/* ================= SEÇÃO 5: CONTATO ================= */}
-        <section
-          id="contact"
-          className="relative flex items-center w-full min-h-screen py-16 sm:py-24 px-4 sm:px-12 md:px-24"
-        >
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 w-full max-w-6xl mx-auto z-10">
-            
-            {/* Left side: Contact Form - with background card on mobile */}
-            <div className="md:col-span-7 flex flex-col justify-center gap-4 sm:gap-6 bg-black/60 sm:bg-transparent backdrop-blur-md sm:backdrop-blur-none p-5 sm:p-0 rounded-2xl border border-zinc-800/40 sm:border-none pointer-events-auto">
-              <div className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs text-amber-400 tracking-widest font-mono uppercase">
-                [ 05 / AGENDAR VOO ]
-              </div>
-              <h2 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight text-zinc-50 uppercase leading-none">
-                BORA <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-500 font-bold">GRAVAR?</span>
-              </h2>
-              <p className="text-xs sm:text-sm text-zinc-400 font-light max-w-md">
-                Preencha as informações do seu negócio. O DJI Mini 3 se posiciona no plano frontal, apontando as lentes em direção ao formulário.
-              </p>
-
-              {formSubmitted ? (
-                <div className="p-5 sm:p-6 rounded-2xl border border-emerald-400/30 bg-emerald-950/20 text-emerald-300 flex flex-col gap-2 max-w-md animate-fade-in">
-                  <h3 className="font-bold text-sm sm:text-base flex items-center gap-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Sinal Enviado!
-                  </h3>
-                  <p className="text-[10px] sm:text-xs text-emerald-400/80 leading-relaxed font-mono">
-                    TELEMETRIA STATUS: LINK ATIVO. Mensagem transmitida para Juninho. Aguarde nosso retorno para planejar a gravação!
-                  </p>
-                </div>
-              ) : (
-                <form onSubmit={handleFormSubmit} className="flex flex-col gap-3.5 sm:gap-4 max-w-md bg-zinc-900/40 backdrop-blur-md p-5 sm:p-6 rounded-2xl border border-zinc-800/40">
-                  
-                  {/* Name field */}
-                  <div className="flex flex-col gap-1">
-                    <label htmlFor="form-name" className="text-[9px] sm:text-xxs font-mono text-zinc-500 uppercase tracking-widest">Seu Nome / Nome Comercial</label>
-                    <input
-                      id="form-name"
-                      type="text"
-                      required
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Ex: Pousada Recanto"
-                      className="px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-lg bg-zinc-950/80 border border-zinc-850 text-xs sm:text-sm text-zinc-200 focus:outline-none focus:border-amber-400 transition-colors placeholder:text-zinc-600"
-                    />
-                  </div>
-
-                  {/* Email field */}
-                  <div className="flex flex-col gap-1">
-                    <label htmlFor="form-email" className="text-[9px] sm:text-xxs font-mono text-zinc-500 uppercase tracking-widest">E-mail de Contato</label>
-                    <input
-                      id="form-email"
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Ex: contato@pousada.com"
-                      className="px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-lg bg-zinc-950/80 border border-zinc-850 text-xs sm:text-sm text-zinc-200 focus:outline-none focus:border-amber-400 transition-colors placeholder:text-zinc-600"
-                    />
-                  </div>
-
-                  {/* Project selection */}
-                  <div className="flex flex-col gap-1">
-                    <label htmlFor="form-type" className="text-[9px] sm:text-xxs font-mono text-zinc-500 uppercase tracking-widest">Tipo de Trabalho</label>
-                    <select
-                      id="form-type"
-                      value={projectType}
-                      onChange={(e) => setProjectType(e.target.value)}
-                      className="px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-lg bg-zinc-950/80 border border-zinc-850 text-xs sm:text-sm text-zinc-200 focus:outline-none focus:border-amber-400 transition-colors appearance-none cursor-pointer"
-                    >
-                      <option value="Commercial">Comércio Local / Pousada</option>
-                      <option value="Real Estate">Imóvel de Luxo / Terreno</option>
-                      <option value="Event">Gravação de Evento</option>
-                      <option value="Other">Outro</option>
-                    </select>
-                  </div>
-
-                  {/* Message field */}
-                  <div className="flex flex-col gap-1">
-                    <label htmlFor="form-message" className="text-[9px] sm:text-xxs font-mono text-zinc-500 uppercase tracking-widest">Fale sobre seu Projeto</label>
-                    <textarea
-                      id="form-message"
-                      rows="2.5"
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      placeholder="Fale brevemente sobre o local e o que gostaria de filmar..."
-                      className="px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-lg bg-zinc-950/80 border border-zinc-850 text-xs sm:text-sm text-zinc-200 focus:outline-none focus:border-amber-400 transition-colors placeholder:text-zinc-600 resize-none"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full py-2.5 sm:py-3 rounded-lg bg-amber-400 hover:bg-amber-300 text-zinc-950 font-bold tracking-wider text-[10px] sm:text-xs uppercase transition-all duration-300 mt-1 shadow-md shadow-amber-950/20 hover:scale-[1.01] cursor-pointer"
-                  >
-                    Agendar decolagem
-                  </button>
-
-                </form>
-              )}
+        {/* PILOTO */}
+        <section id="piloto" className="sec" style={{ background: "#E9DEC9" }} aria-labelledby="t-piloto">
+          <div className="wrap g-2" style={{ alignItems: "center" }}>
+            <div className="px" style={{ position: "relative", aspectRatio: "1 / 1", maxWidth: 520, width: "100%", margin: "0 auto", borderRadius: "50%", background: "#F3ECDF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg viewBox="0 0 400 400" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} aria-hidden="true">
+                <circle className="orbit" cx="200" cy="200" r="186" fill="none" stroke="rgba(168,71,26,.55)" strokeWidth="1.5" strokeDasharray="2 12" />
+                <circle cx="200" cy="200" r="130" fill="none" stroke="rgba(33,27,20,.1)" />
+              </svg>
+              <svg className="hover-drone" viewBox="0 0 240 240" style={{ width: "60%", position: "relative" }} aria-hidden="true">
+                <g stroke="#4A3F33" strokeWidth="10" strokeLinecap="round"><path d="M120 120 L50 50M120 120 L190 50M120 120 L50 190M120 120 L190 190" /></g>
+                <g fill="#2E261D" stroke="#A8471A" strokeWidth="2">
+                  <circle cx="50" cy="50" r="36" /><circle cx="190" cy="50" r="36" /><circle cx="50" cy="190" r="36" /><circle cx="190" cy="190" r="36" />
+                </g>
+                <g fill="rgba(243,236,223,.6)">
+                  {[[18, 47], [158, 47], [18, 187], [158, 187]].map(([x, y]) => (
+                    <g className="prop" key={`${x}-${y}`}><rect x={x} y={y} width="64" height="6" rx="3" /></g>
+                  ))}
+                </g>
+                <rect x="92" y="88" width="56" height="70" rx="16" fill="#9C9389" />
+                <rect x="106" y="150" width="28" height="18" rx="6" fill="#2E261D" />
+                <circle cx="120" cy="160" r="5" fill="#E39A6E" />
+              </svg>
             </div>
-
-            {/* Right side: Operations board & status (with background card on mobile) */}
-            <div className="md:col-span-5 flex flex-col justify-end gap-4 sm:gap-6 pointer-events-auto text-[10px] sm:text-xs font-mono">
-              <div className="bg-zinc-950/60 backdrop-blur-md p-4 sm:p-6 rounded-2xl border border-zinc-800/40 flex flex-col gap-3 sm:gap-4 text-zinc-400">
-                <div className="text-zinc-200 font-bold uppercase tracking-wider border-b border-zinc-800 pb-2">
-                  BASE DE OPERAÇÕES
-                </div>
-                <div className="flex flex-col gap-2">
-                  <div className="flex justify-between">
-                    <span>LOCAL:</span>
-                    <span className="text-zinc-200 font-semibold">Nossa Senhora do Ó, Ipojuca, PE</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>STATUS VFR:</span>
-                    <span className="text-emerald-400 font-semibold">CÉU LIMPO (NÃO CERTIFICADO)</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>VENTO LOCAL:</span>
-                    <span className="text-zinc-200">6 KTS / NE</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>KP INDEX:</span>
-                    <span className="text-emerald-400">1 (EXCELENTE LINK GPS)</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>DRONE:</span>
-                    <span className="text-zinc-200 font-semibold">DJI MINI 3 (249g)</span>
-                  </div>
-                </div>
-                <div className="text-[8px] sm:text-xxs text-zinc-600 leading-normal border-t border-zinc-800/40 pt-2">
-                  DISPONÍVEL PARA CAPTAÇÃO CINEMATOGRÁFICA AÉREA EM IPOJUCA, PORTO DE GALINHAS, SERRAMBI E ARREDORES.
-                </div>
-              </div>
-              {/* Spacer on desktop to let the drone hang here */}
-              <div className="hidden md:block h-12" />
+            <div>
+              <p className="eyebrow rv">Quem pilota</p>
+              <h2 id="t-piloto" className="h2 rv" style={{ marginBottom: 24 }}>Juninho,<br />daqui do Ó</h2>
+              <p className="lead rv" style={{ marginBottom: 18, color: "#3B3227" }}>Piloto de Nossa Senhora do Ó, Ipojuca. Conhece cada trecho da costa: a hora em que as piscinas naturais aparecem, de onde vem o vento e qual ângulo valoriza cada lugar.</p>
+              <p className="lead rv" style={{ marginBottom: 32, color: "#3B3227" }}>Por ser daqui, ele chega rápido e ajusta a agenda à maré e à luz de cada praia.</p>
+              <a className="btn btn-ghost rv" href={WA.geral}>Falar com o Juninho</a>
             </div>
-
           </div>
         </section>
 
-      </div>
+        {/* FAQ */}
+        <section id="duvidas" className="sec" aria-labelledby="t-faq">
+          <div className="wrap g-2">
+            <div className="rv-l">
+              <p className="eyebrow">Dúvidas</p>
+              <h2 id="t-faq" className="h2">Antes de<br />decolar</h2>
+              <p className="lead" style={{ marginTop: 24, maxWidth: 420 }}>Não achou sua resposta? Pergunte direto no WhatsApp.</p>
+            </div>
+            <div className="rv">
+              {FAQ.map(({ q, a }, i) => (
+                <details key={q} open={i === 0}>
+                  <summary>{q}<span className="pl" aria-hidden="true"><PlusIcon /></span></summary>
+                  <p>{a}</p>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* CTA FINAL */}
+        <section style={{ position: "relative", padding: "clamp(96px, 13vw, 190px) 0", overflow: "hidden", background: "#211B14", color: "#F3ECDF" }} aria-labelledby="t-cta">
+          <svg viewBox="0 0 1200 400" preserveAspectRatio="none" style={{ position: "absolute", left: 0, right: 0, bottom: 0, width: "100%", height: "55%", opacity: 0.55 }} aria-hidden="true">
+            <path className="foam" d="M0 120 C 200 60 400 180 600 120 S 1000 60 1200 120" stroke="#E39A6E" strokeWidth="2" fill="none" />
+            <path className="foam b" d="M0 200 C 200 140 400 260 600 200 S 1000 140 1200 200" stroke="#E39A6E" strokeWidth="1.5" fill="none" opacity=".6" />
+            <path className="foam c" d="M0 280 C 200 220 400 340 600 280 S 1000 220 1200 280" stroke="#E39A6E" strokeWidth="1" fill="none" opacity=".4" />
+          </svg>
+          <div className="wrap" style={{ position: "relative", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <p className="eyebrow rv" style={{ color: "#E39A6E" }}>Agenda aberta</p>
+            <h2 id="t-cta" className="xp rv" style={{ margin: "0 0 28px", fontWeight: 900, fontSize: "clamp(60px, 13vw, 200px)", lineHeight: 0.85, textTransform: "uppercase", letterSpacing: "-.02em" }}>
+              Bora<br /><span style={{ color: "#E39A6E" }}>voar?</span>
+            </h2>
+            <p className="rv" style={{ margin: "0 0 36px", maxWidth: 520, fontSize: "clamp(16px, 1.6vw, 19px)", lineHeight: 1.6, color: "#D9CFBF" }}>Mande o local e o tipo de vídeo. O orçamento sai pelo WhatsApp, sem compromisso.</p>
+            <div className="ctas rv" style={{ justifyContent: "center", width: "100%" }}>
+              <a className="btn btn-light" href={WA.geral} style={{ minHeight: 62, padding: "0 34px", fontSize: 18 }}>
+                <WhatsAppIcon />
+                Quero meu orçamento
+              </a>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer style={{ background: "#211B14", color: "#D9CFBF", borderTop: "1px solid rgba(243,236,223,.12)", padding: "48px 0 56px" }}>
+        <div className="wrap" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 32 }}>
+          <div>
+            <p className="xp" style={{ margin: "0 0 12px", fontWeight: 900, fontSize: 18, color: "#F3ECDF" }}>DRONE <span style={{ color: "#E39A6E" }}>PORTO</span> PE</p>
+            <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6 }}>Filmagem e fotografia aérea com drone em Porto de Galinhas e Ipojuca — PE.</p>
+          </div>
+          <div>
+            <p className="mono" style={{ margin: "0 0 12px", fontSize: 12, letterSpacing: ".12em", color: "#E39A6E" }}>ATENDEMOS</p>
+            <p style={{ margin: 0, fontSize: 14, lineHeight: 1.7 }}>{PLACES.join(" · ")}</p>
+          </div>
+          <div>
+            <p className="mono" style={{ margin: "0 0 12px", fontSize: 12, letterSpacing: ".12em", color: "#E39A6E" }}>CONTATO</p>
+            <p style={{ margin: "0 0 6px", fontSize: 14 }}><a href={WA.geral} style={{ color: "#F3ECDF" }}>WhatsApp {WHATSAPP_DISPLAY}</a></p>
+            <p style={{ margin: 0, fontSize: 14 }}><a href={INSTAGRAM} target="_blank" rel="noopener" style={{ color: "#F3ECDF" }}>@droneportope</a></p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

@@ -1,36 +1,22 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Drone Porto PE — site
 
-## Getting Started
+Site de filmagem e fotografia aérea com drone em Porto de Galinhas e Ipojuca (PE). Next.js 14 (App Router), página estática, sem bibliotecas de animação: tudo em CSS.
 
-First, run the development server:
+## Rodar
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abra http://localhost:3000.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## Onde editar
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `src/lib/site.js`: WhatsApp, Instagram, URL do site, regiões atendidas e perguntas frequentes (também alimentam o JSON-LD de SEO).
+- `src/app/page.js`: seções da página (problema, para quem, pacotes, voos, como funciona, piloto, dúvidas, CTA).
+- `src/components/Hero.jsx`: primeira dobra com o visor aéreo animado.
+- `src/components/Header.jsx`: navegação, menu hambúrguer no mobile e botões fixos de WhatsApp.
+- `src/app/globals.css`: paleta (areia `#F3ECDF`, café `#211B14`, terracota `#A8471A`) e animações.
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+A galeria "Voos recentes" usa ilustrações provisórias: troque pelas fotos e vídeos reais do Instagram.
